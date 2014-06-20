@@ -1,0 +1,42 @@
+apply from: "gradle/vertx.gradle"
+
+dependencies {
+
+}
+
+test {
+
+}
+
+def configurePom(def pom) {
+  pom.project {
+    name rootProject.name
+    description 'Vert.x module for unzipping .zip files'
+    inceptionYear '2014'
+    packaging 'jar'
+    url 'https://github.com/web-education/mod-zip'
+
+    developers {
+      developer {
+        id 'dboissin'
+      }
+    }
+
+    scm {
+      url 'https://github.com/web-education/mod-zip.git'
+    }
+
+    licenses {
+      license {
+        name 'GNU Lesser General Public License'
+        url 'http://www.gnu.org/licenses/lgpl-3.0.txt'
+        distribution 'repo'
+      }
+    }
+
+    properties {
+      setProperty('project.build.sourceEncoding', 'UTF8')
+    }
+  }
+}
+
