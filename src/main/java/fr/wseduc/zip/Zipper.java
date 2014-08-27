@@ -3,6 +3,7 @@ package fr.wseduc.zip;
 import org.vertx.java.busmods.BusModBase;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.Message;
+import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 
 import java.io.File;
@@ -32,8 +33,20 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 
 	@Override
 	public void handle(Message<JsonObject> message) {
-		final String path = getMandatoryString("path", message);
-		if (path == null) return;
+		final Object path = message.body().getValue("path");
+		if (path == null) {
+			sendError(message, "Source path is null.");
+			return;
+		}
+		JsonArray paths;
+		if (path instanceof JsonArray) {
+			paths = (JsonArray) path;
+		} else if (path instanceof String) {
+			paths = new JsonArray().add(path);
+		} else {
+			sendError(message, "Invalid path type.");
+			return;
+		}
 		final String zipName = message.body().getString("zipFile", generateTmpFileName());
 		final boolean deletePath = message.body().getBoolean("deletePath", false);
 		final int level = message.body().getInteger("level", Deflater.BEST_SPEED);
@@ -41,18 +54,22 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 			sendError(message, "Zip file already exists.");
 			return;
 		}
-		if (!vertx.fileSystem().existsSync(path)) {
-			sendError(message, "Source path doesn't exists.");
-			return;
+		for (Object o : paths) {
+			if (!vertx.fileSystem().existsSync(o.toString())) {
+				sendError(message, "Source path doesn't exists : " + o);
+				return;
+			}
 		}
 		if (level < 0 || level > 9) {
 			sendError(message, "Level value must be 0-9");
 			return;
 		}
 		try {
-			zipData(path, zipName, level);
+			zipData(paths, zipName, level);
 			if (deletePath) {
-				vertx.fileSystem().deleteSync(path, true);
+				for (Object o : paths) {
+					vertx.fileSystem().deleteSync(o.toString(), true);
+				}
 			}
 			sendOK(message, new JsonObject().putString("destZip", zipName));
 		} catch (IOException e) {
@@ -65,37 +82,38 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 		return TEMP_DIR + File.separator + UUID.randomUUID().toString() + ".zip";
 	}
 
-	private void zipData(String path, String zipFile, int level) throws IOException {
-		File directory = new File(path);
-		Set<String> files;
-		if (directory.isDirectory()) {
-			files = listFilesRecursive(directory);
-		} else {
-			files = new HashSet<>();
-			files.add(directory.getAbsolutePath());
-		}
-
+	private void zipData(JsonArray paths, String zipFile, int level) throws IOException {
 		try (FileOutputStream fos  = new FileOutputStream(zipFile);
 			 ZipOutputStream zos = new ZipOutputStream(fos)) {
 			zos.setLevel(level);
-			for (String filePath : files) {
-				String name = filePath.substring(directory.getParentFile()
-						.getAbsolutePath().length() + 1,
-						filePath.length());
-				ZipEntry zipEntry = new ZipEntry(name);
-				zos.putNextEntry(zipEntry);
-				FileInputStream fis = null;
-				try {
-					fis = new FileInputStream(filePath);
-					byte[] buffer = new byte[BUFFER_SIZE];
-					int length;
-					while ((length = fis.read(buffer)) > 0) {
-						zos.write(buffer, 0, length);
-					}
-				} finally {
-					zos.closeEntry();
-					if (fis != null) {
-						fis.close();
+			for (Object path : paths) {
+				Set<String> files;
+				File directory = new File(path.toString());
+				if (directory.isDirectory()) {
+					files = listFilesRecursive(directory);
+				} else {
+					files = new HashSet<>();
+					files.add(directory.getAbsolutePath());
+				}
+				for (String filePath : files) {
+					String name = filePath.substring(directory.getParentFile()
+							.getAbsolutePath().length() + 1,
+							filePath.length());
+					ZipEntry zipEntry = new ZipEntry(name);
+					zos.putNextEntry(zipEntry);
+					FileInputStream fis = null;
+					try {
+						fis = new FileInputStream(filePath);
+						byte[] buffer = new byte[BUFFER_SIZE];
+						int length;
+						while ((length = fis.read(buffer)) > 0) {
+							zos.write(buffer, 0, length);
+						}
+					} finally {
+						zos.closeEntry();
+						if (fis != null) {
+							fis.close();
+						}
 					}
 				}
 			}

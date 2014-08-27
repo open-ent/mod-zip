@@ -5,6 +5,7 @@ import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.Message;
+import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.testtools.TestVerticle;
 
@@ -19,6 +20,8 @@ public class ZipperTest extends TestVerticle {
 			File.separator + "dest.zip";
 	private static final String DEST_ZIP_FILE = System.getProperty("java.io.tmpdir") +
 			File.separator + "destFile.zip";
+	private static final String DEST_ZIP_MULTI = System.getProperty("java.io.tmpdir") +
+			File.separator + "destMulti.zip";
 	private static final String SRC_PATH = ZipperTest.class.getClassLoader()
 			.getResource("some-dir").getPath();
 
@@ -71,6 +74,25 @@ public class ZipperTest extends TestVerticle {
 		});
 	}
 
+	@Test
+	public void testZipMultipleFiles() {
+		JsonArray paths = new JsonArray()
+				.add(SRC_PATH + File.separator + "sub-dir")
+				.add(SRC_PATH + File.separator + "textfile.txt");
+		JsonObject msg = new JsonObject().putArray("path", paths)
+				.putString("zipFile", DEST_ZIP_MULTI);
+		vertx.eventBus().send("zipper", msg, new Handler<Message<JsonObject>>() {
+			@Override
+			public void handle(Message<JsonObject> reply) {
+				assertEquals("ok", reply.body().getString("status"));
+				String dest = reply.body().getString("destZip");
+				assertEquals(DEST_ZIP_MULTI, dest);
+				assertZipped(dest);
+				testComplete();
+			}
+		});
+	}
+
 	private void assertZipped(String dest) {
 		assertTrue(vertx.fileSystem().existsSync(dest));
 	}
@@ -99,6 +121,7 @@ public class ZipperTest extends TestVerticle {
 		try {
 			vertx.fileSystem().deleteSync(DEST_ZIP);
 			vertx.fileSystem().deleteSync(DEST_ZIP_FILE);
+			vertx.fileSystem().deleteSync(DEST_ZIP_MULTI);
 		} catch (Exception ignore) {}
 	}
 
