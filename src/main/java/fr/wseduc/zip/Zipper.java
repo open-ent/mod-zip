@@ -16,11 +16,11 @@
 
 package fr.wseduc.zip;
 
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.vertx.java.busmods.BusModBase;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,9 +42,9 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 	@Override
 	public void start() {
 		super.start();
-		JsonObject conf = container.config();
+		JsonObject conf = config;
 		String address = conf.getString("address", "zipper");
-		eb.registerHandler(address, this);
+		eb.consumer(address, this);
 	}
 
 	@Override
@@ -66,12 +66,12 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 		final String zipName = message.body().getString("zipFile", generateTmpFileName());
 		final boolean deletePath = message.body().getBoolean("deletePath", false);
 		final int level = message.body().getInteger("level", Deflater.BEST_SPEED);
-		if (vertx.fileSystem().existsSync(zipName)) {
+		if (vertx.fileSystem().existsBlocking(zipName)) {
 			sendError(message, "Zip file already exists.");
 			return;
 		}
 		for (Object o : paths) {
-			if (!vertx.fileSystem().existsSync(o.toString())) {
+			if (!vertx.fileSystem().existsBlocking(o.toString())) {
 				sendError(message, "Source path doesn't exists : " + o);
 				return;
 			}
@@ -84,10 +84,10 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 			zipData(paths, zipName, level);
 			if (deletePath) {
 				for (Object o : paths) {
-					vertx.fileSystem().deleteSync(o.toString(), true);
+					vertx.fileSystem().deleteRecursiveBlocking(o.toString(), true);
 				}
 			}
-			sendOK(message, new JsonObject().putString("destZip", zipName));
+			sendOK(message, new JsonObject().put("destZip", zipName));
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
 			sendError(message, e.getMessage());
