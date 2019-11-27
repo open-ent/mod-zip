@@ -83,8 +83,15 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 		try {
 			zipData(paths, zipName, level);
 			if (deletePath) {
-				for (Object o : paths) {
-					vertx.fileSystem().deleteRecursiveBlocking(o.toString(), true);
+				try
+				{
+					for (Object o : paths) {
+						vertx.fileSystem().deleteRecursiveBlocking(o.toString(), true);
+					}
+				} catch(io.vertx.core.file.FileSystemException e)
+				{
+					logger.error(e.getMessage(), e);
+					// Don't send an error if the delete fails
 				}
 			}
 			sendOK(message, new JsonObject().put("destZip", zipName));
