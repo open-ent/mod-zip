@@ -124,18 +124,22 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 							filePath.length());
 					ZipEntry zipEntry = new ZipEntry(name);
 					zos.putNextEntry(zipEntry);
-					FileInputStream fis = null;
-					try {
-						fis = new FileInputStream(filePath);
-						byte[] buffer = new byte[BUFFER_SIZE];
-						int length;
-						while ((length = fis.read(buffer)) > 0) {
-							zos.write(buffer, 0, length);
-						}
-					} finally {
-						zos.closeEntry();
-						if (fis != null) {
-							fis.close();
+
+					if(filePath.endsWith(File.separator) == false)
+					{
+						FileInputStream fis = null;
+						try {
+							fis = new FileInputStream(filePath);
+							byte[] buffer = new byte[BUFFER_SIZE];
+							int length;
+							while ((length = fis.read(buffer)) > 0) {
+								zos.write(buffer, 0, length);
+							}
+						} finally {
+							zos.closeEntry();
+							if (fis != null) {
+								fis.close();
+							}
 						}
 					}
 				}
@@ -151,6 +155,10 @@ public class Zipper extends BusModBase implements Handler<Message<JsonObject>> {
 				if (file.isFile()) {
 					f.add(file.getAbsolutePath());
 				} else {
+					String dirName = file.getAbsolutePath();
+					if(dirName.endsWith(File.separator) == false)
+						dirName += File.separator;
+					f.add(dirName);
 					f.addAll(listFilesRecursive(file));
 				}
 			}
