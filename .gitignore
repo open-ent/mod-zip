@@ -20,3 +20,7 @@ test-results
 test-tmp
 *.class
 classes
+gradle
+gradlew*
+.env
+dependency-reduced-pom.xml
