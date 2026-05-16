@@ -1,0 +1,10 @@
+{
+  "main":"fr.wseduc.zip.Zipper",
+  "worker":true,
+
+  "description":"Vert.x module which zip files",
+  "licenses": ["GNU Lesser General Public License"],
+  "author": "dboissin",
+  "keywords": ["zip", "zip", "compress", "zip", "worker"],
+  "homepage": "https://github.com/web-education/mod-zip"
+}
