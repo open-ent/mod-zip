@@ -94,12 +94,12 @@ jobs:
           cat > /tmp/nx-settings.xml <<EOF
           <settings><servers><server><id>pt-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASSWORD}</password></server></servers></settings>
           EOF
-          GROUP_ID=$(mvn help:evaluate -Dexpression=project.groupId -q -DforceStdout)
-          ARTIFACT_ID=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
           if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR not found"; exit 1; fi
-          # fat-mod en artefact PRINCIPAL (sans classifier) : c'est ce que le launcher tire de nexus
+          # coords depuis le nom du fat-mod (grp~art~ver-fat.jar) : pas besoin de résoudre le projet
+          BASE=$(basename "${FAT_JAR}" -fat.jar)
+          GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
+          echo "Deploying ${GROUP_ID}:${ARTIFACT_ID}:${VERSION} -> rct-nexus (artefact principal = fat)"
           mvn deploy:deploy-file -s /tmp/nx-settings.xml -Dfile="${FAT_JAR}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" -Dpackaging=jar -DrepositoryId=pt-releases -Durl="https://rct-nexus.tech.fr/repository/maven-releases/" -B
 
       - name: Create GitHub Release
