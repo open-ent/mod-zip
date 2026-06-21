@@ -100,10 +100,11 @@ jobs:
           # coords depuis le nom du fat-mod (grp~art~ver-fat.jar) : pas besoin de résoudre le projet
           BASE=$(basename "${FAT_JAR}" -fat.jar)
           GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
-          echo "Deploying ${GROUP_ID}:${ARTIFACT_ID}:${VERSION} -> rct-nexus (artefact principal = fat)"
+          echo "Deploying ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat -> rct-nexus"
           # IMPORTANT : lancer depuis /tmp (dossier SANS pom) sinon mvn lit le pom du projet et résout le parent
+          # classifier=fat : c'est l'artefact que le launcher tire (mod-...-fat.jar)
           cd /tmp
-          mvn deploy:deploy-file -s /tmp/nx-settings.xml -Dfile="${FAT_ABS}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" -Dpackaging=jar -DrepositoryId=pt-releases -Durl="https://rct-nexus.tech.fr/repository/maven-releases/" -B
+          mvn deploy:deploy-file -s /tmp/nx-settings.xml -Dfile="${FAT_ABS}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" -Dclassifier=fat -Dpackaging=jar -DrepositoryId=pt-releases -Durl="https://rct-nexus.tech.fr/repository/maven-releases/" -B
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
